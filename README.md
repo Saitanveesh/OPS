@@ -1,32 +1,43 @@
 # OPS — Three-PC Red/Blue Cyber Range
 
-Development branch: cyber-range-mvp. Date: 2026-10-23.
+**Status:** First working MVP release available; Python localhost integration tests passed. **Not yet installed or tested on the actual laboratory PCs.**
 
-## Lab machines
-| Role | Host | Wired LAN IP |
+## Assigned hosts
+| Role | PC | Wired LAN IPv4 |
 |---|---|---|
-| Red Team | lab-pc5 | 10.5.114.47 |
-| Training application + optional Suricata | lab-pc6 | 10.5.113.245 |
-| SOC + Blue Team | lab-pc7 | 10.5.115.130 |
+| Red Team / bounded request generator | PC-5 | 10.5.114.47 |
+| Training storefront, auth API, optional Suricata sensor | PC-6 | 10.5.113.245 |
+| Correlation engine, evidence store, SOC & Blue Team portal | PC-7 | 10.5.115.130 |
 
-All systems: 14 GiB RAM, 20 logical CPUs, 48 GiB free disk.
+All systems: 14 GiB RAM, 20 logical CPUs and about 48 GiB free disk.
 
-## Tested MVP
-The companion OPS-cyber-range.zip attached in the ChatGPT conversation contains the Python training target, SOC with real correlation and verified containment, red client, browser dashboards, optional Suricata EVE forwarder and detailed deployment README. Python localhost integration tests passed. It has NOT been deployed to the user's three computers yet.
+## Offline-friendly download and extraction
 
-Unzip the package on all three computers. Follow the detailed README.md inside the extracted OPS-cyber-range directory. If internet is unavailable, use USB or SCP to transfer it.
+Clone the development branch on one Git-enabled machine:
 
-Once copied to a Git-enabled workstation, commit the source files to this branch:
+```bash
+git clone -b cyber-range-mvp https://github.com/Saitanveesh/OPS.git
+cd OPS
+bash unpack.sh
+cd OPS-cyber-range
+cat README.md
+```
 
-    git clone -b cyber-range-mvp https://github.com/Saitanveesh/OPS.git
-    cd OPS
-    mkdir -p cyber-range
-    cp -a /path/to/OPS-cyber-range/. cyber-range/
-    git add cyber-range
-    git commit -m 'Add tested OPS three-PC cyber range MVP'
-    git push origin cyber-range-mvp
+If your lab has no GitHub/internet access, download the companion OPS-cyber-range.zip from ChatGPT on another device and copy it to the three lab workstations using USB or SCP. **No pip or Docker is required.**
 
-## Security boundary
-10.5.112.0/20 is a shared campus subnet, not an authorization boundary. Test only the explicitly assigned application at 10.5.113.245:18080 after authorization, preferably on a dedicated VLAN. The red test client is single-threaded and capped; it is NOT a DDoS generator.
+The repository's `bundle/archive.00.b64`–`archive.03.b64` files contain a release archive split into 4 individually base64-encoded parts. `unpack.sh` decodes and reassembles them, checks the SHA-256 digest, then unpacks the source tree. The full source will be available at `OPS-cyber-range/`.
 
-App-level blocking is not a deployed inline network IPS. Suricata is optional network IDS. The offline experiment uses a precomputed hash index rather than genuine rainbow chains; it cannot itself trigger remote IDS evidence.
+Expected SHA-256 for the unpacked compressed archive: `82d79de71987242d195ec80960115bbccc3a8728fd62206a37004b14f9cc5bb7`. The exact byte stream from GitHub was checked against the local build with matching per-part and complete-archive CRC32.
+
+## What is implemented
+
+- PC-6: Synthetic RangeMart storefront, deliberately weak training account, JSON event logs, explicit client allowlist, rate limiting and an authenticated containment API.
+- PC-7: SOC dashboard, persisted SQLite events/incidents, authentication anomaly correlation, automatic blocks restricted to the assigned PC-5 source and confirmed by target control API, blue-team login, analyst controls, action history.
+- PC-5: Single-threaded HTTP probe, 8-attempt auth test, capped 24-request burst, and an offline *precomputed hash index* lookup followed by a real login.
+- Optional: Suricata Eve JSON alert ingestion; actual Suricata installation, capture and alerting are not verified yet.
+
+## Boundaries
+
+The shared `10.5.112.0/20` campus subnet is **not** authorization to test every device. Isolate the experiment or secure authorization for precisely the designated three machines and ports. Run tests only against PC-6 TCP 18080. This package contains no DDoS generator. The first release provides application-level enforcement, **not** Suricata inline IPS. The precomputed hash index is not a true rainbow-chain table, and offline lookup is not remotely observable by network IDS.
+
+See `OPS-cyber-range/README.md` after extraction for full PC-specific commands, key provisioning, browser URLs, safety conditions and known limitations.
